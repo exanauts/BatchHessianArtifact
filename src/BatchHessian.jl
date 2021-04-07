@@ -1,3 +1,16 @@
+module BatchHessian
+
+using LinearAlgebra
+using SparseArrays
+
+# GPU library
+using CUDA.CUSPARSE
+using KernelAbstractions
+
+# ExaPF
+using ExaPF
+using ExaPF.AutoDiff
+using ExaPF.PowerSystem
 using BlockPowerFlow.CUSOLVERRF
 
 struct BatchHessianStorage{VT, MT, Hess, Fac1, Fac2}
@@ -19,7 +32,7 @@ end
 function BatchHessianStorage(polar::PolarForm{T, VI, VT, MT}, J, nbatch::Int) where {T, VI, VT, MT}
     nx = get(polar, NumberOfState())
     nu = get(polar, NumberOfControl())
-    ngen = get(polar, PS.NumberOfGenerators())
+    ngen = get(polar, PowerSystem.NumberOfGenerators())
     Hstate = ExaPF.batch_hessian(polar, ExaPF.power_balance, nbatch)
     ∂f = VT(undef, ngen)
     ∂²f = VT(undef, ngen)
@@ -139,5 +152,7 @@ function cpu_hessian!(nlp::ExaPF.AbstractNLPEvaluator, hess, x)
         fast_hessprod!(nlp, ∇g, hv, x, v)
     end
     println("Elapsed: ", time() - tic)
+end
+
 end
 

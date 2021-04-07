@@ -1,29 +1,22 @@
+using CUDA
+using ExaPF
+using BatchHessian
+using KernelAbstractions
 using Printf
+using LinearAlgebra
 using SuiteSparse
+using BlockPowerFlow.CUSOLVERRF
 
-function bench_batch_reverse(nlp::ExaPF.ReducedSpaceEvaluator, nbatch)
-    nu = ExaPF.n_variables(nlp)
-    nx = ExaPF.get(nlp.model, ExaPF.NumberOfState())
-    J = nlp.state_jacobian.x.J
-    batch_ad = BatchHessianStorage(nlp.model, J, nbatch)
-MT = isa(nlp.model.device, CUDADevice) ? CuMatrix : Matrix
+const BH = BatchHessian
 
-    hv = zeros(nx + nu, nbatch) |> MT
-    tgt = rand(nx + nu, nbatch) |> MT
-    @info "AD"
-    @time ExaPF.batch_adj_hessian_prod!(nlp.model, batch_ad.state, hv, nlp.buffer, nlp.λ, tgt)
-    @info "AD"
-    @time ExaPF.batch_adj_hessian_prod!(nlp.model, batch_ad.state, hv, nlp.buffer, nlp.λ, tgt)
-    @info "AD"
-    @time ExaPF.batch_adj_hessian_prod!(nlp.model, batch_ad.state, hv, nlp.buffer, nlp.λ, tgt)
-    return
-end
+
+SOURCE_DATA = joinpath(dirname(@__FILE__), "..", "..", "ExaPF.jl", "data")
 
 function batch_hessian!(nlp::ExaPF.AbstractNLPEvaluator, hess, u, nbatch)
     n = ExaPF.n_variables(nlp)
     # Init AD
     J = nlp.state_jacobian.x.J
-    batch_ad = BatchHessianStorage(nlp.model, J, nbatch)
+    batch_ad = BH.BatchHessianStorage(nlp.model, J, nbatch)
     # Allocate memory
     v_cpu = zeros(n, nbatch)
 
@@ -40,7 +33,7 @@ function batch_hessian!(nlp::ExaPF.AbstractNLPEvaluator, hess, u, nbatch)
             v_cpu[j+(i-1)*nbatch, j] = 1.0
         end
         copyto!(v, v_cpu)
-        batch_hessprod!(nlp, batch_ad, hm, u, v)
+        BH.batch_hessprod!(nlp, batch_ad, hm, u, v)
 
         copyto!(hess, (i-1)*nbatch*n + 1, hm, 1, n*nbatch)
     end
@@ -53,7 +46,7 @@ function batch_hessian!(nlp::ExaPF.AbstractNLPEvaluator, hess, u, nbatch)
             v_cpu[n-j+1, j] = 1.0
         end
         copyto!(v, v_cpu)
-        batch_hessprod!(nlp, batch_ad, hm, u, v)
+        BH.batch_hessprod!(nlp, batch_ad, hm, u, v)
         # Keep only last columns in hm
         copyto!(hess, N*nbatch*n + 1, hm, (nbatch - last_batch)*n, n*last_batch)
     end
@@ -66,12 +59,8 @@ function batch_hessian!(nlp::ExaPF.AbstractNLPEvaluator, hess, u, nbatch)
     return
 end
 
-datafile = joinpath(dirname(@__FILE__), "..", "..", "data", "case300.m")
-datafile = joinpath(dirname(@__FILE__), "..", "..", "data", "case118.m")
-# datafile = joinpath(dirname(@__FILE__), "..", "..", "data", "case9241pegase.m")
-# datafile = joinpath(dirname(@__FILE__), "..", "data", "case25Kc2.m")
+datafile = joinpath(SOURCE_DATA, "case118.m")
 device = CUDADevice()
-# datafile =  "/home/fpacaud/exa/pglib-opf/pglib_opf_case1354_pegase.m"
 nbatch = 8
 nlp = ExaPF.ReducedSpaceEvaluator(datafile; device=device)
 u = ExaPF.initial(nlp)
@@ -79,17 +68,16 @@ n = length(u)
 
 if isa(device, CUDADevice)
     nlp.λ .= 1.0
-    # hess = CUDA.zeros(Float64, n, n)
-    # CUDA.@time batch_hessian!(nlp, hess, u, nbatch)
+    hess = CUDA.zeros(Float64, n, n)
+    CUDA.@time batch_hessian!(nlp, hess, u, nbatch)
     # @profile batch_hessian!(nlp, hess, u, nbatch)
-    bench_batch_reverse(nlp, nbatch)
     GC.gc(true)
     CUDA.reclaim()
 elseif isa(device, CPU)
     nlp.λ .= 1.0
     hess = zeros(n, n)
     SuiteSparse.UMFPACK.umf_ctrl[8]=2.0
-    @time cpu_hessian!(nlp, hess, u)
+    @time BH.cpu_hessian!(nlp, hess, u)
     SuiteSparse.UMFPACK.umf_ctrl[8]=0.0
-    @time cpu_hessian!(nlp, hess, u)
+    @time BH.cpu_hessian!(nlp, hess, u)
 end

@@ -1,0 +1,12 @@
+name = "BatchHessian"
+uuid = "5c109b52-f0cc-4a77-8383-6cc513c62e72"
+authors = ["fpacaud <fpacaud@anl.gov>"]
+version = "0.1.0"
+
+[deps]
+BlockPowerFlow = "0ca6dcf5-c23f-4097-a3ba-dae6c919a0c0"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+ExaPF = "0cf0e50c-a82e-488f-ac7e-41ffdff1b8aa"
+KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
