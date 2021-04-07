@@ -14,10 +14,10 @@ SOURCE_DATA = joinpath(dirname(@__FILE__), "..", "..", "ExaPF.jl", "data")
 
 datafile = joinpath(SOURCE_DATA, "case300.m")
 device = CUDADevice()
-nbatch = 32
 nlp = ExaPF.ReducedSpaceEvaluator(datafile; device=device)
 u = ExaPF.initial(nlp)
 n = length(u)
+nbatch = n
 
 if isa(device, CUDADevice)
     nlp.λ .= 1.0

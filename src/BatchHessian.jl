@@ -100,10 +100,17 @@ function batch_hessprod!(nlp::ExaPF.ReducedSpaceEvaluator, batch_ad, hessmat, u,
 end
 
 function batch_hessian!(nlp::ExaPF.AbstractNLPEvaluator, hess, u, nbatch)
-    n = ExaPF.n_variables(nlp)
-    # Init AD
     J = nlp.state_jacobian.x.J
+    # Init AD
     batch_ad = BatchHessianStorage(nlp.model, J, nbatch)
+    res = batch_hessian!(nlp, hess, u, batch_ad, nbatch)
+    CUSOLVERRF.cudestroy!(batch_ad.∇g)
+    CUSOLVERRF.cudestroy!(batch_ad.∇gᵀ)
+    return res
+end
+
+function batch_hessian!(nlp::ExaPF.AbstractNLPEvaluator, hess, u, batch_ad, nbatch)
+    n = ExaPF.n_variables(nlp)
     # Allocate memory
     v_cpu = zeros(n, nbatch)
 
@@ -139,9 +146,6 @@ function batch_hessian!(nlp::ExaPF.AbstractNLPEvaluator, hess, u, nbatch)
         copyto!(hess, N*nbatch*n + 1, hm, (nbatch - last_batch)*n, n*last_batch)
     end
     total_time = time()  - tic
-
-    CUSOLVERRF.cudestroy!(batch_ad.∇g)
-    CUSOLVERRF.cudestroy!(batch_ad.∇gᵀ)
 
     return (total_time, time_hessian)
 end
