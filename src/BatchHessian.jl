@@ -99,7 +99,54 @@ function batch_hessprod!(nlp::ExaPF.ReducedSpaceEvaluator, batch_ad, hessmat, u,
     return
 end
 
-function fast_hessprod!(nlp::ExaPF.ReducedSpaceEvaluator, ∇g, hessvec, u::Array, w::Array)
+function batch_hessian!(nlp::ExaPF.AbstractNLPEvaluator, hess, u, nbatch)
+    n = ExaPF.n_variables(nlp)
+    # Init AD
+    J = nlp.state_jacobian.x.J
+    batch_ad = BatchHessianStorage(nlp.model, J, nbatch)
+    # Allocate memory
+    v_cpu = zeros(n, nbatch)
+
+    v = similar(u, n, nbatch)
+    hm = similar(u, n, nbatch)
+
+    tic = time()
+    time_hessian = 0.0
+
+    ExaPF.update!(nlp.model, batch_ad.state, nlp.buffer)
+    N = div(n, nbatch, RoundDown)
+    for i in 1:N
+        fill!(v_cpu, 0.0)
+        @inbounds for j in 1:nbatch
+            v_cpu[j+(i-1)*nbatch, j] = 1.0
+        end
+        copyto!(v, v_cpu)
+        time_hessian += @elapsed batch_hessprod!(nlp, batch_ad, hm, u, v)
+
+        copyto!(hess, (i-1)*nbatch*n + 1, hm, 1, n*nbatch)
+    end
+
+    # Last slice
+    last_batch = n - N*nbatch
+    if last_batch > 0
+        fill!(v_cpu, 0.0)
+        @inbounds for j in 1:nbatch
+            v_cpu[n-j+1, j] = 1.0
+        end
+        copyto!(v, v_cpu)
+        time_hessian += @elapsed batch_hessprod!(nlp, batch_ad, hm, u, v)
+        # Keep only last columns in hm
+        copyto!(hess, N*nbatch*n + 1, hm, (nbatch - last_batch)*n, n*last_batch)
+    end
+    total_time = time()  - tic
+
+    CUSOLVERRF.cudestroy!(batch_ad.∇g)
+    CUSOLVERRF.cudestroy!(batch_ad.∇gᵀ)
+
+    return (total_time, time_hessian)
+end
+
+function cpu_hessprod!(nlp::ExaPF.ReducedSpaceEvaluator, ∇g, hessvec, u::Array, w::Array)
     @assert nlp.hessians != nothing
 
     nx = get(nlp.model, NumberOfState())
@@ -145,13 +192,15 @@ function cpu_hessian!(nlp::ExaPF.AbstractNLPEvaluator, hess, x)
     ∇g = lu(J)
     v = similar(x)
     tic = time()
+    time_hessian = 0.0
     @inbounds for i in 1:n
         hv = @view hess[:, i]
         fill!(v, 0)
         v[i] = 1.0
-        fast_hessprod!(nlp, ∇g, hv, x, v)
+        time_hessian += @elapsed cpu_hessprod!(nlp, ∇g, hv, x, v)
     end
-    println("Elapsed: ", time() - tic)
+    total_time = time() - tic
+    return (total_time, time_hessian)
 end
 
 end
