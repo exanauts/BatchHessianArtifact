@@ -1,7 +1,17 @@
+using CUDA
 using BenchmarkTools
 using DelimitedFiles
 using Statistics
 
+using ExaPF
+using BatchHessian
+using KernelAbstractions
+using Printf
+using LinearAlgebra
+using SuiteSparse
+using BlockPowerFlow.CUSOLVERRF
+
+const BH = BatchHessian
 OUTPUTDIR = joinpath(dirname(@__FILE__), "..", "results")
 SOURCE_DATA = joinpath(dirname(@__FILE__), "..", "..", "ExaPF.jl", "data")
 
@@ -82,6 +92,7 @@ function bench_batched_hessian(nlp; ntrials=50)
     nu = ExaPF.n_variables(nlp)
     nx = ExaPF.get(nlp.model, ExaPF.NumberOfState())
     J = nlp.state_jacobian.x.J
+    u = ExaPF.initial(nlp)
 
     batches = [4, 8, 16, 32, 64, 128, 256, 512]
     timings = zeros(ntrials)
@@ -118,9 +129,9 @@ function launch_benchmark(bench; outputdir=OUTPUTDIR)
     for case in [
         "case118.m",
         "case300.m",
-        "case1354.m",
-        "case2869.m",
-        "case9241pegase.m",
+        # "case1354.m",
+        # "case2869.m",
+        # "case9241pegase.m",
     ]
         @info case
         datafile = joinpath(SOURCE_DATA, case)
