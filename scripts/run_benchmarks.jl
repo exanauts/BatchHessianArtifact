@@ -18,6 +18,7 @@ SOURCE_DATA = joinpath(dirname(@__FILE__), "..", "..", "ExaPF.jl", "data")
 SUBDIR = Dict(
     :BATCH_AUTODIFF=>"batch_autodiff",
     :BATCH_HESSIAN=>"batch_hessian",
+    :HESSIAN_CPU=>"hessian_cpu",
     :ONESHOT=>"oneshot",
 )
 
@@ -122,27 +123,65 @@ function bench_batched_hessian(nlp; ntrials=50)
     return results
 end
 
+function bench_hessian_cpu(nlp; ntrials=50)
+    nu = ExaPF.n_variables(nlp)
+    nx = ExaPF.get(nlp.model, ExaPF.NumberOfState())
+    J = nlp.state_jacobian.x.J
+    u = ExaPF.initial(nlp)
+
+    nbatch = 16
+    timings = zeros(ntrials)
+    results = zeros(1, 4)
+    SuiteSparse.UMFPACK.umf_ctrl[8]=0.0
+
+    hess = zeros(Float64, nu, nu)
+
+    for i in 1:ntrials
+        t1, t2 = BH.cpu_hessian!(nlp, hess, u)
+        timings[i] = t1
+    end
+
+    id = 1
+    results[id, 1] = mean(timings)
+    results[id, 2] = median(timings)
+    results[id, 3] = std(timings)
+    results[id, 4] = length(timings)
+
+    return results
+end
+
 function launch_benchmark(bench; outputdir=OUTPUTDIR)
     RESULTS = Dict()
 
     outputdir = joinpath(OUTPUTDIR, SUBDIR[bench])
     for case in [
-        "case118.m",
-        "case300.m",
+        # "case30.m",
+        # "case118.m",
+        # "case300.m",
         # "case1354.m",
         # "case2869.m",
         # "case9241pegase.m",
+        # "case19402.m",
+        "case30Kc.m",
     ]
         @info case
         datafile = joinpath(SOURCE_DATA, case)
-        nlp = ExaPF.ReducedSpaceEvaluator(datafile; device=CUDADevice())
-        nlp.λ .= 1.0
         if bench == :ONESHOT
+            nlp = ExaPF.ReducedSpaceEvaluator(datafile; device=CUDADevice())
+            nlp.λ .= 1.0
             results = bench_one_shot_hessian(nlp; ntrials=50)
         elseif bench == :BATCH_AUTODIFF
+            nlp = ExaPF.ReducedSpaceEvaluator(datafile; device=CUDADevice())
+            nlp.λ .= 1.0
             results = bench_batch_autodiff(nlp)
         elseif bench == :BATCH_HESSIAN
+            nlp = ExaPF.ReducedSpaceEvaluator(datafile; device=CUDADevice())
+            nlp.λ .= 1.0
             results = bench_batched_hessian(nlp)
+        elseif bench == :HESSIAN_CPU
+            nlp = ExaPF.ReducedSpaceEvaluator(datafile; device=CPU())
+            nlp.λ .= 1.0
+            results = bench_hessian_cpu(nlp; ntrials=20)
         end
         RESULTS[case] = results
 
@@ -155,4 +194,5 @@ function launch_benchmark(bench; outputdir=OUTPUTDIR)
     return RESULTS
 end
 
-RESULTS = launch_benchmark(:BATCH_HESSIAN)
+# RESULTS = launch_benchmark(:BATCH_HESSIAN)
+RESULTS = launch_benchmark(:HESSIAN_CPU)
