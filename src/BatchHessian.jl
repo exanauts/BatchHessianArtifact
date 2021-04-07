@@ -69,8 +69,8 @@ function batch_hessprod!(nlp::ExaPF.ReducedSpaceEvaluator, batch_ad, hessmat, u,
     tgt = batch_ad.tmp_tgt
     hv = batch_ad.tmp_hv
 
-    mul!(z, ∇gᵤ, w, -1.0, 0.0)
-    LinearAlgebra.ldiv!(batch_ad.∇g, z)
+    tmul1 = @elapsed mul!(z, ∇gᵤ, w, -1.0, 0.0)
+    tsp1 = @elapsed LinearAlgebra.ldiv!(batch_ad.∇g, z)
 
     # Init tangent
     for i in 1:nbatch
@@ -86,17 +86,17 @@ function batch_hessprod!(nlp::ExaPF.ReducedSpaceEvaluator, batch_ad, hessmat, u,
     ∂fₓ = hv[1:nx, :]
     ∂fᵤ = hv[nx+1:nx+nu, :]
 
-    ExaPF.batch_adj_hessian_prod!(nlp.model, batch_ad.state, hv, nlp.buffer, nlp.λ, tgt)
+    tad = @elapsed ExaPF.batch_adj_hessian_prod!(nlp.model, batch_ad.state, hv, nlp.buffer, nlp.λ, tgt)
     ∂fₓ .= @view hv[1:nx, :]
     ∂fᵤ .= @view hv[nx+1:nx+nu, :]
 
     # Second order adjoint
-    LinearAlgebra.ldiv!(ψ, batch_ad.∇gᵀ, ∂fₓ)
+    tsp2 = @elapsed LinearAlgebra.ldiv!(ψ, batch_ad.∇gᵀ, ∂fₓ)
 
     hessmat .= ∂fᵤ
-    mul!(hessmat, transpose(∇gᵤ), ψ, -1.0, 1.0)
+    tmul2 = @elapsed mul!(hessmat, transpose(∇gᵤ), ψ, -1.0, 1.0)
 
-    return
+    return (tmul1, tsp1, tad, tsp2, tmul2)
 end
 
 function batch_hessian!(nlp::ExaPF.AbstractNLPEvaluator, hess, u, nbatch)

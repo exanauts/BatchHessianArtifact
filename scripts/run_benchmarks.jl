@@ -17,9 +17,11 @@ SOURCE_DATA = joinpath(dirname(@__FILE__), "..", "..", "ExaPF.jl", "data")
 
 SUBDIR = Dict(
     :BATCH_AUTODIFF=>"batch_autodiff",
+    :BATCH_HESSPROD=>"batch_hessprod",
     :BATCH_HESSIAN=>"batch_hessian",
     :HESSIAN_CPU=>"hessian_cpu",
     :ONESHOT=>"oneshot",
+    :DISPLAY=>"",
 )
 
 
@@ -89,13 +91,59 @@ function bench_one_shot_hessian(nlp; ntrials=50)
     return results
 end
 
-function bench_batched_hessian(nlp; ntrials=50)
+function bench_batched_hessprod(nlp; ntrials=50)
     nu = ExaPF.n_variables(nlp)
     nx = ExaPF.get(nlp.model, ExaPF.NumberOfState())
     J = nlp.state_jacobian.x.J
     u = ExaPF.initial(nlp)
 
     batches = [4, 8, 16, 32, 64, 128, 256, 512]
+    timings = zeros(ntrials, 5)
+    results = zeros(length(batches), 8)
+
+
+    for (id, nbatch) in enumerate(batches)
+        (nbatch > nu) && break
+        batch_ad = BH.BatchHessianStorage(nlp.model, J, nbatch)
+        ExaPF.update!(nlp.model, batch_ad.state, nlp.buffer)
+        v = similar(u, nu, nbatch)
+        hm = similar(u, nu, nbatch)
+        v_cpu = zeros(nu, nbatch)
+
+        fill!(v_cpu, 0.0)
+        @inbounds for j in 1:nbatch
+            v_cpu[j, j] = 1.0
+        end
+        copyto!(v, v_cpu)
+
+        for i in 1:ntrials
+            timings[i, :] .= BH.batch_hessprod!(nlp, batch_ad, hm, u, v)
+        end
+
+        results[id, 1] = median(sum(timings, dims=2))
+        med = median(timings, dims=1)
+        for i in 1:5
+            results[id, i+1] = med[i]
+        end
+        results[id, 7] = length(timings)
+        results[id, 8] = nbatch
+
+        CUSOLVERRF.cudestroy!(batch_ad.∇g)
+        CUSOLVERRF.cudestroy!(batch_ad.∇gᵀ)
+
+        GC.gc(true)
+        CUDA.reclaim()
+    end
+    return results
+end
+
+function bench_batched_hessian(nlp; ntrials=50)
+    nu = ExaPF.n_variables(nlp)
+    nx = ExaPF.get(nlp.model, ExaPF.NumberOfState())
+    J = nlp.state_jacobian.x.J
+    u = ExaPF.initial(nlp)
+
+    batches = [16, 32, 64, 128]
     timings = zeros(ntrials)
     results = zeros(length(batches), 5)
 
@@ -157,12 +205,12 @@ function launch_benchmark(bench; outputdir=OUTPUTDIR)
     for case in [
         # "case30.m",
         # "case118.m",
-        # "case300.m",
-        # "case1354.m",
-        # "case2869.m",
-        # "case9241pegase.m",
+        "case300.m",
+        "case1354.m",
+        "case2869.m",
+        "case9241pegase.m",
         # "case19402.m",
-        "case30Kc.m",
+        # "case30Kc.m",
     ]
         @info case
         datafile = joinpath(SOURCE_DATA, case)
@@ -174,19 +222,29 @@ function launch_benchmark(bench; outputdir=OUTPUTDIR)
             nlp = ExaPF.ReducedSpaceEvaluator(datafile; device=CUDADevice())
             nlp.λ .= 1.0
             results = bench_batch_autodiff(nlp)
+        elseif bench == :BATCH_HESSPROD
+            nlp = ExaPF.ReducedSpaceEvaluator(datafile; device=CUDADevice())
+            nlp.λ .= 1.0
+            results = bench_batched_hessprod(nlp; ntrials=50)
         elseif bench == :BATCH_HESSIAN
             nlp = ExaPF.ReducedSpaceEvaluator(datafile; device=CUDADevice())
             nlp.λ .= 1.0
-            results = bench_batched_hessian(nlp)
+            results = bench_batched_hessian(nlp; ntrials=20)
         elseif bench == :HESSIAN_CPU
             nlp = ExaPF.ReducedSpaceEvaluator(datafile; device=CPU())
             nlp.λ .= 1.0
             results = bench_hessian_cpu(nlp; ntrials=20)
+        else
+            nlp = ExaPF.ReducedSpaceEvaluator(datafile; device=CPU())
+            println(nlp.model)
+            results = nothing
         end
-        RESULTS[case] = results
 
-        output = joinpath(outputdir, case)
-        writedlm(output, results)
+        if bench != :DISPLAY
+            RESULTS[case] = results
+            output = joinpath(outputdir, case)
+            writedlm(output, results)
+        end
         GC.gc(true)
         CUDA.reclaim()
     end
@@ -194,5 +252,5 @@ function launch_benchmark(bench; outputdir=OUTPUTDIR)
     return RESULTS
 end
 
-# RESULTS = launch_benchmark(:BATCH_HESSIAN)
-RESULTS = launch_benchmark(:HESSIAN_CPU)
+RESULTS = launch_benchmark(:BATCH_HESSPROD)
+# RESULTS = launch_benchmark(:HESSIAN_CPU)
