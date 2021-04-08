@@ -13,6 +13,7 @@ using BlockPowerFlow.CUSOLVERRF
 
 const BH = BatchHessian
 OUTPUTDIR = joinpath(dirname(@__FILE__), "..", "results")
+ARCH = "V100"
 SOURCE_DATA = joinpath(dirname(@__FILE__), "..", "..", "ExaPF.jl", "data")
 
 SUBDIR = Dict(
@@ -201,7 +202,7 @@ end
 function launch_benchmark(bench; outputdir=OUTPUTDIR)
     RESULTS = Dict()
 
-    outputdir = joinpath(OUTPUTDIR, SUBDIR[bench])
+    outputdir = joinpath(OUTPUTDIR, ARCH, SUBDIR[bench])
     for case in [
         # "case30.m",
         # "case118.m",
