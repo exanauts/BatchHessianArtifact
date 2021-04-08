@@ -144,7 +144,7 @@ function bench_batched_hessian(nlp; ntrials=50)
     J = nlp.state_jacobian.x.J
     u = ExaPF.initial(nlp)
 
-    batches = [16, 32, 64, 128]
+    batches = [16, 32, 64, 128, 256, 512]
     timings = zeros(ntrials)
     results = zeros(length(batches), 5)
 
