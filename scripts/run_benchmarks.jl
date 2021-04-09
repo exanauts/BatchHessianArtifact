@@ -31,7 +31,7 @@ function bench_batch_autodiff(nlp::ExaPF.ReducedSpaceEvaluator)
     nx = ExaPF.get(nlp.model, ExaPF.NumberOfState())
     J = nlp.state_jacobian.x.J
 
-    batches =  [4, 8, 16, 32, 64, 128]
+    batches =  [4, 8, 16, 32, 64, 128, 256, 512]
     results = zeros(length(batches), 4)
 
     for (id, nbatch) in enumerate(batches)
@@ -144,7 +144,7 @@ function bench_batched_hessian(nlp; ntrials=50)
     J = nlp.state_jacobian.x.J
     u = ExaPF.initial(nlp)
 
-    batches = [16, 32, 64, 128, 256, 512]
+    batches = [4, 8, 16, 32, 64, 128, 256, 512]
     timings = zeros(ntrials)
     results = zeros(length(batches), 5)
 
@@ -253,5 +253,5 @@ function launch_benchmark(bench; outputdir=OUTPUTDIR)
     return RESULTS
 end
 
-RESULTS = launch_benchmark(:BATCH_HESSPROD)
+RESULTS = launch_benchmark(:BATCH_AUTODIFF)
 # RESULTS = launch_benchmark(:HESSIAN_CPU)
