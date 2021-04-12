@@ -5,7 +5,8 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-mpl.rcParams['font.family'] = 'Inconsolata'
+plt.rc('font', family='serif')
+# mpl.rcParams['font.family'] = 'Inconsolata'
 plt.rcParams['font.size'] = 14
 plt.rcParams['axes.linewidth'] = 0.5
 
@@ -60,7 +61,7 @@ if SCALE_CPU:
     ax[0].set_ylabel("Ratio (GPU / CPU)")
 else:
     ax[0].set_ylabel("Time (s)")
-ax[0].legend()
+ax[0].legend(fontsize="x-small", loc=3)
 plt.tight_layout()
 plt.savefig("batch_hessian.pdf")
 plt.show()

@@ -5,9 +5,11 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-mpl.rcParams['font.family'] = 'Inconsolata'
+plt.rc('font', family='serif')
 plt.rcParams['font.size'] = 14
 plt.rcParams['axes.linewidth'] = 0.5
+plt.rc('xtick', labelsize='x-small')
+plt.rc('ytick', labelsize='x-small')
 
 RESULTS_DIR = "results/"
 ARCHS = ["V100", "A100"]
@@ -49,7 +51,7 @@ for (k, arch) in enumerate(ARCHS):
     ax[k].grid(ls=":")
 
 
-ax[-1].legend()
+ax[-1].legend(fontsize="small")
 ax[0].set_ylabel('Time (ms)')
 plt.savefig("time_decomposed_batch_hessprod.pdf")
 plt.tight_layout()
