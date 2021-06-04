@@ -47,7 +47,7 @@ for (k, arch) in enumerate(ARCHS):
     ax[k].set_xticklabels([int(i) for i in batches])
 
     # ax.set_yscale("log", base=10)
-    ax[k].set_xlabel('#Batches')
+    ax[k].set_xlabel('Batch size $N$')
     ax[k].grid(ls=":")
 
 

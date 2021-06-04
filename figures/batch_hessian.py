@@ -54,7 +54,7 @@ for (k, arch) in enumerate(ARCHS):
     ax[k].grid(ls=":")
     ax[k].set_yscale("log", base=10)
     ax[k].set_xscale("log", base=2)
-    ax[k].set_xlabel("#batches")
+    ax[k].set_xlabel("Batch size $N$")
     ax[k].set_title(arch)
 
 if SCALE_CPU:
