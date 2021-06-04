@@ -12,9 +12,10 @@ using SuiteSparse
 using BlockPowerFlow.CUSOLVERRF
 
 const BH = BatchHessian
+
 OUTPUTDIR = joinpath(dirname(@__FILE__), "..", "results")
 ARCH = "V100"
-SOURCE_DATA = joinpath(dirname(@__FILE__), "..", "..", "ExaPF.jl", "data")
+SOURCE_DATA = joinpath(dirname(@__FILE__), "..", "data")
 
 SUBDIR = Dict(
     :BATCH_AUTODIFF=>"batch_autodiff",
@@ -204,14 +205,11 @@ function launch_benchmark(bench; outputdir=OUTPUTDIR)
 
     outputdir = joinpath(OUTPUTDIR, ARCH, SUBDIR[bench])
     for case in [
-        # "case30.m",
-        # "case118.m",
+        "case118.m",
         "case300.m",
         "case1354.m",
         "case2869.m",
         "case9241pegase.m",
-        # "case19402.m",
-        # "case30Kc.m",
     ]
         @info case
         datafile = joinpath(SOURCE_DATA, case)
@@ -247,11 +245,11 @@ function launch_benchmark(bench; outputdir=OUTPUTDIR)
             writedlm(output, results)
         end
         GC.gc(true)
-        CUDA.reclaim()
+        (CUDA.has_cuda_gpu()) && CUDA.reclaim()
     end
 
     return RESULTS
 end
 
-RESULTS = launch_benchmark(:BATCH_AUTODIFF)
-# RESULTS = launch_benchmark(:HESSIAN_CPU)
+# RESULTS = launch_benchmark(:BATCH_AUTODIFF)
+RESULTS = launch_benchmark(:HESSIAN_CPU)

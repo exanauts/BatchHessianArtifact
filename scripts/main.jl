@@ -9,11 +9,10 @@ using BlockPowerFlow.CUSOLVERRF
 
 const BH = BatchHessian
 
+SOURCE_DATA = joinpath(pathof(ExaPF), "data")
 
-SOURCE_DATA = joinpath(dirname(@__FILE__), "..", "..", "ExaPF.jl", "data")
-
-datafile = joinpath(SOURCE_DATA, "case300.m")
-device = CUDADevice()
+datafile = joinpath(SOURCE_DATA, "case9241pegase.m")
+device = CPU()
 nlp = ExaPF.ReducedSpaceEvaluator(datafile; device=device)
 u = ExaPF.initial(nlp)
 n = length(u)
@@ -34,6 +33,6 @@ elseif isa(device, CPU)
     t1, t2 = @time BH.cpu_hessian!(nlp, hess, u)
     @printf("Total hess: %.4f \t Total hessprod: %.4f \n", t1, t2)
     SuiteSparse.UMFPACK.umf_ctrl[8]=0.0
-    t1, t2 = @time BH.cpu_hessian!(nlp, hess, u)
+    t1, t2 = @profile BH.cpu_hessian!(nlp, hess, u)
     @printf("Total hess: %.4f \t Total hessprod: %.4f \n", t1, t2)
 end

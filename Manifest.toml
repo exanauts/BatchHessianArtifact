@@ -47,7 +47,9 @@ version = "0.5.0"
 
 [[BlockPowerFlow]]
 deps = ["CEnum", "CUDA", "ExaPF", "LinearAlgebra", "LinearOperators", "MatrixMarket", "Printf", "SparseArrays", "Test"]
-path = "/home/fpacaud/.julia/dev/BlockPowerFlow"
+git-tree-sha1 = "064fc66687a48c7d377622ffdf3175cd5834415c"
+repo-rev = "master"
+repo-url = "https://github.com/exanauts/BlockPowerFlow.jl/"
 uuid = "0ca6dcf5-c23f-4097-a3ba-dae6c919a0c0"
 version = "0.1.0"
 
