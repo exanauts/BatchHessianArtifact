@@ -1,21 +1,27 @@
-using CUDA
-using BenchmarkTools
+
+# Standard packages
 using DelimitedFiles
+using LinearAlgebra
+using Printf
 using Statistics
+using SuiteSparse
+
+# Benchmark
+using BenchmarkTools
+
+# GPU related packages
+using CUDA
+using KernelAbstractions
 
 using ExaPF
 using BatchHessian
-using KernelAbstractions
-using Printf
-using LinearAlgebra
-using SuiteSparse
 using BlockPowerFlow.CUSOLVERRF
 
 const BH = BatchHessian
 
 OUTPUTDIR = joinpath(dirname(@__FILE__), "..", "results")
-ARCH = "V100"
 SOURCE_DATA = joinpath(dirname(@__FILE__), "..", "data")
+ARCH = "V100"
 
 SUBDIR = Dict(
     :BATCH_AUTODIFF=>"batch_autodiff",
@@ -206,10 +212,10 @@ function launch_benchmark(bench; outputdir=OUTPUTDIR)
     outputdir = joinpath(OUTPUTDIR, ARCH, SUBDIR[bench])
     for case in [
         "case118.m",
-        "case300.m",
-        "case1354.m",
-        "case2869.m",
-        "case9241pegase.m",
+        # "case300.m",
+        # "case1354.m",
+        # "case2869.m",
+        # "case9241pegase.m",
     ]
         @info case
         datafile = joinpath(SOURCE_DATA, case)
@@ -251,5 +257,3 @@ function launch_benchmark(bench; outputdir=OUTPUTDIR)
     return RESULTS
 end
 
-# RESULTS = launch_benchmark(:BATCH_AUTODIFF)
-RESULTS = launch_benchmark(:HESSIAN_CPU)
