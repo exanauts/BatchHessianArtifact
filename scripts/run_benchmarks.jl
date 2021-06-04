@@ -212,10 +212,10 @@ function launch_benchmark(bench; outputdir=OUTPUTDIR)
     outputdir = joinpath(OUTPUTDIR, ARCH, SUBDIR[bench])
     for case in [
         "case118.m",
-        # "case300.m",
-        # "case1354.m",
-        # "case2869.m",
-        # "case9241pegase.m",
+        "case300.m",
+        "case1354.m",
+        "case2869.m",
+        "case9241pegase.m",
     ]
         @info case
         datafile = joinpath(SOURCE_DATA, case)

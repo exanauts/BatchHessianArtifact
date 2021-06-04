@@ -2,6 +2,8 @@
 JULIA_EXEC = julia
 PYTHON_EXEC = python
 
+all: instantiate run 
+
 instantiate: 
 	$(JULIA_EXEC) --project -e "using Pkg; Pkg.instantiate()"
 
