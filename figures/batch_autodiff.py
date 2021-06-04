@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-mpl.rcParams['font.family'] = 'Inconsolata'
+plt.rc('font', family='serif')
 plt.rcParams['font.size'] = 14
 plt.rcParams['axes.linewidth'] = 0.5
 
@@ -14,7 +14,7 @@ SUBPATH = "/batch_autodiff/"
 ARCHS = ["V100", "A100"]
 
 
-batches = [4, 8, 16, 32, 64, 128]
+batches = [4, 8, 16, 32, 64, 128, 256, 512]
 fig, ax = plt.subplots(figsize=(8, 5), ncols=len(ARCHS), sharey=True)
 for (k, arch) in enumerate(ARCHS):
     result_path = RESULTS_DIR + arch + SUBPATH
@@ -39,8 +39,9 @@ for (k, arch) in enumerate(ARCHS):
     ax[k].set_xscale("log", base=2)
     ax[k].set_xlabel("#batches")
     ax[k].set_title(arch)
+
 ax[0].set_ylabel("Time per batch (ms)")
-ax[-1].legend()
+ax[0].legend(fontsize="x-small", loc=3)
 
 plt.savefig("comparison_autodiff.pdf")
 plt.tight_layout()

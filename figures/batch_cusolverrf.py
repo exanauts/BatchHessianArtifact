@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-mpl.rcParams['font.family'] = 'Inconsolata'
+plt.rc('font', family='serif')
 plt.rcParams['font.size'] = 14
 plt.rcParams['axes.linewidth'] = 0.5
 
@@ -48,7 +48,7 @@ ax.set_yscale("log", base=10)
 ax.set_xscale("log", base=2)
 ax.set_xlabel('#Batches')
 ax.grid(ls=":")
-ax.legend()
+ax.legend(loc=3, fontsize="x-small")
 
 plt.savefig("batch_cusolver.pdf")
 plt.tight_layout()
